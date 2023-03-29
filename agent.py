@@ -14,8 +14,12 @@ import abc
 import logging
 import datetime
 import time
+import traceback
+import io
 
 logger = logging.getLogger("agent")
+ocounter = 0
+ologger = logging.getLogger("openaiE")
 
 class Agent(abc.ABC):
     #  class Agent {{{ # 
@@ -79,14 +83,21 @@ class Agent(abc.ABC):
             screen_representation.append( lxml.html.tostring( html
                                                             , pretty_print=True
                                                             , encoding="unicode"
-                                                            )
+                                                            ).strip()\
+                                                             .replace("\n", "&#10;")\
+                                                             .replace("\r", "&#13;")
                                         )
-        screen_representation: str = "".join(screen_representation)
+        screen_representation: str = "\n".join(screen_representation)
 
         action_str: str = self._get_action( task
                                           , screen_representation.strip()
                                           , instruction
                                           )
+
+        if action_str=="NOTHINGG":
+            return { "action_type": np.array(VhIoWrapper.ActionType.NOTHING)
+                   , "records": False
+                   }
 
         self._action_history.append(action_str)
 
@@ -178,6 +189,12 @@ class AutoAgent(Agent):
         """
         Args:
             prompt_template (string.Template): template of the prompt
+
+            api_key (str): openai api key
+            model (str): the model to use
+            max_tokens (int): max number of tokens to generate
+            temperature (float): generating temperature
+            request_timeout (float): waiting time for the client to timeout
         """
 
         super(AutoAgent, self).__init__()
@@ -207,25 +224,41 @@ class AutoAgent(Agent):
                                               , actions="\n".join(self._action_history)
                                               )
         try:
+            #  Fetch Response {{{ # 
+            request_time = datetime.datetime.now()
+            timedelta: datetime.timedelta = request_time - self._last_request_time
+            timedelta: float = timedelta.total_seconds()
+            if 3.1 - timedelta > 0.:
+                time.sleep(3.1-timedelta)
             completion = openai.Completion.create( model=self._model
                                                  , prompt=prompt
                                                  , max_tokens=self._max_tokens
                                                  , temperature=self._temperature
                                                  , request_timeout=self._request_timeout
                                                  )
-            request_time = datetime.datetime.now()
-            timedelta: datetime.timedelta = request_time - self._last_request_time
-            timedelta: float = timedelta.total_seconds()
-            if 3.1 - timedelta > 0.:
-                time.sleep(3.1-timedelta)
-        except:
-            return "NOTHING"
+            self._last_request_time = datetime.datetime.now()
 
-        logger.debug( "Return: {text: %s, reason: %s}"
-                    , repr(completion.choices[0].text)
-                    , repr(completion.choices[0].finish_reason)
-                    )
+            logger.debug( "Return: {text: %s, reason: %s}"
+                        , repr(completion.choices[0].text)
+                        , repr(completion.choices[0].finish_reason)
+                        )
 
-        return completion.choices[0].text.strip()
+            response: str = completion.choices[0].text.strip()
+            #  }}} Fetch Response # 
+
+            #  Parse Action Text {{{ # 
+            action_text: str = response
+            #  }}} Parse Action Text # 
+        except Exception as e:
+            with io.StringIO() as bfr:
+                ocounter = globals()["ocounter"]
+                traceback.print_exc(file=bfr)
+                ologger.debug("%d: %s", ocounter, bfr.getvalue())
+                logger.debug("Response error %d, %s", ocounter, str(type(e)))
+                globals()["ocounter"] += 1
+            action_text: str = "NOTHINGG"
+
+
+        return action_text
         #  }}} method _get_action # 
     #  }}} class AutoAgent # 

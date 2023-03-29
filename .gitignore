@@ -1,12 +1,21 @@
 window_dump_html.html
 weights
+openaiconfig.yaml
+visualization
+bandits.yaml
+
 logs
 logs-historyless/
-openaiconfig.yaml
+bandits.logs/
 
 __pycache__
 tags
+tags-opts
+.syncthing.*.tmp
 
 backup-configs/
 data-backup/
 llmdemo*
+
+snapshots
+branch-config/

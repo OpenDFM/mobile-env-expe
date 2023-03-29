@@ -51,22 +51,38 @@ def main():
                                                      )
                                        )
     stdout_handler = logging.StreamHandler(sys.stdout)
+    sdebug_handler = logging.FileHandler( os.path.join( args.log_dir
+                                                      , "sdebug-{:}.log".format(datetime_str)
+                                                      )
+                                        )
+    openai_error_handler = logging.FileHandler( os.path.join( args.log_dir
+                                                            , "openai-{:}.log".format(datetime_str)
+                                                            )
+                                              )
 
     file_handler.setLevel(logging.INFO)
     debug_handler.setLevel(logging.DEBUG)
     stdout_handler.setLevel(logging.INFO)
+    sdebug_handler.setLevel(logging.DEBUG)
+    openai_error_handler.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter(fmt="\x1b[1;33m[%(asctime)s \x1b[31m%(levelname)s \x1b[32m%(module)s/%(lineno)d-%(processName)s\x1b[1;33m] \x1b[0m%(message)s")
     file_handler.setFormatter(formatter)
     debug_handler.setFormatter(formatter)
     stdout_handler.setFormatter(formatter)
+    sdebug_handler.setFormatter(formatter)
+    openai_error_handler.setFormatter(formatter)
 
     #stdout_handler.addFilter(logging.Filter("main"))
     stdout_handler.addFilter(logging.Filter("agent"))
+    sdebug_handler.addFilter(logging.Filter("agent"))
+    openai_error_handler.addFilter(logging.Filter("openaiE"))
 
     logger.addHandler(file_handler)
     logger.addHandler(debug_handler)
     logger.addHandler(stdout_handler)
+    logger.addHandler(sdebug_handler)
+    logger.addHandler(openai_error_handler)
 
     logger = logging.getLogger("agent")
     #  }}} Config Logger # 
@@ -95,6 +111,7 @@ def main():
                           , unify_vocabulary=os.path.join( args.tokenizer_path
                                                          , "vocab.txt"
                                                          )
+                          , with_view_hierarchy=True
                           )
     env = VhIoWrapper( env
                      , AutoTokenizer.from_pretrained(args.tokenizer_path)
@@ -105,15 +122,18 @@ def main():
     logger.info("The environment is ready.")
     #  }}} Build Agent and Environment # 
 
+    #  Work Flow {{{ # 
     max_nb_steps = 15
     for i in range(env.nb_tasks):
     #for i in [10]:
         model.reset()
         step: dm_env.TimeStep = env.switch_task(i)
         command: str = "\n".join(env.command())
-        instruction: str = "\n".join(env.task_instructions())
+        instruction: str = env.task_instructions(latest_only=True)
 
         nb_steps = 0
+        nb_nothing_steps = 0
+
         reward: float = step.reward
         succeeds: bool = True
         while not step.last():
@@ -124,17 +144,24 @@ def main():
                            )
             step = env.step(action)
             if len(env.task_instructions())>0:
-                instruction = "\n".join(env.task_instructions())
+                instruction = env.task_instructions(latest_only=True)
             reward += step.reward
 
-            nb_steps += 1
+            if action["action_type"]==VhIoWrapper.ActionType.NOTHING\
+                    and "records" in action\
+                    and not action["records"]:
+                nb_nothing_steps += 1
+            else:
+                nb_steps += 1
+
             if nb_steps>=max_nb_steps:
                 succeeds = False
                 break
 
-        logger.info( "\x1b[42mEND!\x1b[0m TaskId: %d, TaskName: %s, #Steps: %d, Reward: %.1f, Succeds: %s"
-                   , i, env.task_id, nb_steps, reward, str(succeeds)
+        logger.info( "\x1b[42mEND!\x1b[0m TaskId: %d, TaskName: %s, #Steps: %d(%d), Reward: %.1f, Succeds: %s"
+                   , i, env.task_id, nb_steps, nb_nothing_steps, reward, str(succeeds)
                    )
+    #  }}} Work Flow # 
 
 if __name__ == "__main__":
     main()
