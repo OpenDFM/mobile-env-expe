@@ -124,8 +124,8 @@ def main():
 
     #  Work Flow {{{ # 
     max_nb_steps = 15
-    for i in range(env.nb_tasks):
-    #for i in [10]:
+    for i in range(70, env.nb_tasks):
+        #for i in range(3, 70):
         model.reset()
         step: dm_env.TimeStep = env.switch_task(i)
         command: str = "\n".join(env.command())

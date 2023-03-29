@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export TOKENIZERS_PARALLELISM=false
-python main.py --task-path ../android_env/apps/wikihow/templates.miniout.microbuffer\
+python main.py --task-path ../../../android_env/apps/wikihow/templates.miniout.microbuffer.complementary\
 			   --avd-name Pixel_2_API_30_ga_x64_1\
-			   --tokenizer-path ../deep_rl_zoo/weights/vilt-b32-mlm-tiny-tkn\
+			   --tokenizer-path weights/vilt-b32-mlm-tiny-tkn\
 			   --prompt-template prompt_pt.txt\
 			   --request-timeout 5.
