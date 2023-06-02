@@ -4,8 +4,10 @@ from typing import List, NamedTuple, Dict
 import requests
 import json
 
-_BASE_URL: Dict[str, str] =\
+_BASE_URL =\
         { "completion": "http://54.193.55.85:10030/v1/completions"
+        , "chatcompletionv2": "http://lk.beta.duiopen.com/llm/v1/completions/chat?use_filter=false&use_cache=false&return_openai_completion_result=false"
+        , "completionv2": "http://lk.beta.duiopen.com/llm/v1/completions?use_filter=false&use_cache=false&return_openai_completion_result=false"
         }
 
 def request( url: str
@@ -58,6 +60,7 @@ class Result(NamedTuple):
     finish_reason: str
 
 class OpenAI:
+    #  class OpenAI {{{ # 
     def __init__(self, token_key: str):
         self._token_key: str = token_key
 
@@ -107,46 +110,111 @@ class OpenAI:
                      , "length" if response["result"]["is_truncated"] else "stop"
                      )
         #  }}} method Completion # 
+    #  }}} class OpenAI # 
 
 ### ### ###
 
-def request_chatglm(content):
-    data = {
-        "model": "chatglm-6b",
-        "user": "test-user",
-        "messages": [
-        {
-            "role": "user",
-            "content": content
-        }
-        ],
-        # "max_tokens": 400,
-        # "temperature": 0.95,
-        # "num_beams": 1,
-        # "do_sample": True,
-        # "top_p": 0.7,
-        # "presence_penalty": 1.0,
-        # "frequency_penalty": 0,
-        "requestId": "slt",
-    }
+def ChatGLM( messages: List[Dict[str, str]]
+           , request_timeout: float = 5.
+           ) -> Dict[str, Any]:
+    #  function ChatGLM {{{ # 
+    """
+    Args:
+        messages (List[Dict[str, str]): list of dict like
+          {
+            "role": "system" | "user" | "assistant"
+            "content": str
+          }
+        request_timeout (float): float
 
-    resp = requests.post("http://lk.beta.duiopen.com/llm/v1/completions/chat?use_filter=false&use_cache=false&return_openai_completion_result=false", json=data)
-    return resp.json()
+    Returns:
+        Dict[str, Any]: the resonse in json
+    """
 
-def request_llama(content):
-    data = {
-        "model": "llama-7b",
-        "user": "test-user",
-        "prompt": content,
-        "max_tokens": 50,
-        "temperature": 0.05,
-        # "num_beams": 1,
-        # "do_sample": True,
-        # "top_p": 1,
-        "presence_penalty": 0,
-        "frequency_penalty": 0,
-        "requestId": "slt",
-    }
+    load = { "model": "chatglm-6b"
+           , "user": "test-user"
+           , "messages": messages
+           , "requestId": "slt"
+           }
 
-    resp = requests.post("http://lk.beta.duiopen.com/llm/v1/completions?use_filter=false&use_cache=false&return_openai_completion_result=false", json=data)
-    return resp.json()
+    response: requests.Response = requests.post( _BASE_URL["chatcompletionv2"]
+                                               , json=load
+                                               , timeout=request_timeout
+                                               )
+    return response.json()
+    #  }}} function ChatGLM # 
+
+def LLaMA( prompt: str
+         , max_tokens: int
+         , temperature: float
+         , presence_penalty: float = 0.
+         , frequency_penalty: float = 0.
+         , request_timeout: float = 5.
+         ) -> Dict[str, Any]:
+    #  function LLaMA {{{ # 
+    load = { "model": "llama-7b"
+           , "user": "test-user"
+           , "prompt": prompt
+           , "max_tokens": max_tokens
+           , "temperature": temperature
+           , "presence_penalty": presence_penalty
+           , "frequency_penalty": frequency_penalty
+           , "requestId": "slt"
+           }
+
+    response: requests.Response = requests.post( _BASE_URL["completionv2"]
+                                               , json=load
+                                               , timeout=request_timeout
+                                               )
+    return response.json()
+    #  }}} function LLaMA # 
+
+#  Reference Code from SLT {{{ # 
+#def request_chatglm(content):
+#    data = {
+#        "model": "chatglm-6b",
+#        "user": "test-user",
+#        "messages": [
+#        {
+#            "role": "user",
+#            "content": content
+#        }
+#        ],
+#        # "max_tokens": 400,
+#        # "temperature": 0.95,
+#        # "num_beams": 1,
+#        # "do_sample": True,
+#        # "top_p": 0.7,
+#        # "presence_penalty": 1.0,
+#        # "frequency_penalty": 0,
+#        "requestId": "slt",
+#    }
+#
+#    resp = requests.post("http://lk.beta.duiopen.com/llm/v1/completions/chat?use_filter=false&use_cache=false&return_openai_completion_result=false", json=data)
+#    return resp.json()
+
+#def request_llama(content):
+    #data = {
+        #"model": "llama-7b",
+        #"user": "test-user",
+        #"prompt": content,
+        #"max_tokens": 50,
+        #"temperature": 0.05,
+        ## "num_beams": 1,
+        ## "do_sample": True,
+        ## "top_p": 1,
+        #"presence_penalty": 0,
+        #"frequency_penalty": 0,
+        #"requestId": "slt",
+    #}
+#
+    #resp = requests.post("http://lk.beta.duiopen.com/llm/v1/completions?use_filter=false&use_cache=false&return_openai_completion_result=false", json=data)
+    #return resp.json()
+#  }}} Reference Code from SLT # 
+
+if __name__ == "__main__":
+    message = { "role": "user"
+               , "content": "Hello, "
+               }
+    response: Dict[str, Any] = ChatGLM([message])
+    print(response)
