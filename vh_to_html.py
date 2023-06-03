@@ -5,6 +5,8 @@ import lxml.html
 
 from typing import Dict, List, Tuple, Pattern
 
+from android_env.wrappers.vh_io_wrapper import filter_elements
+
 import re
 
 def convert_node(node: lxml.etree.Element) -> lxml.html.Element:
@@ -101,37 +103,77 @@ def convert_tree(node: lxml.etree.Element) ->\
           bounding box of the leaf elements
     """
 
-    result_list: List[lxml.html.Element] = []
+    node_list: List[lxml.etree.Element]
     bbox_list: List[List[int]] = []
+    node_list, bbox_list = filter_elements(node)
 
-    id_counter = 0
-    for n in node.iter():
-        if n.getparent() is not None:
-            n.set( "clickable"
-                 , str(  n.get("clickable")=="true"\
-                      or n.getparent().get("clickable")=="true"
-                      ).lower()
-                 )
-        if n.get("bounds")=="[0,0][0,0]":
-            continue
-        if len(list(n))==0:
-            bounds_match = bounds_pattern.match(n.get("bounds"))
-            bbox: List[int] = list( map( int
-                                       , bounds_match.groups()
-                                       )
-                                  )
-            if bbox[0]==bbox[2] or bbox[1]==bbox[3]:
-                continue
+    result_list: List[lxml.html.Element] = []
 
-            html_element: lxml.html.Element = convert_node(n)
-            html_element.set("id", str(id_counter))
-            html_element.set("clickable", n.get("clickable"))
-            result_list.append(html_element)
-            id_counter += 1
+    for i, n in enumerate(node_list):
+        html_element: lxml.html.Element = convert_node(n)
+        html_element.set("id", str(i))
+        html_element.set("clickable", n.get("clickable"))
+        result_list.append(html_element)
 
-            bbox_list.append(bbox)
     return result_list, bbox_list
     #  }}} function convert_tree # 
+
+def convert_simple_page(page: str) -> List[str]:
+    """
+    Args:
+        page (str): " [SEP] " concatenated page observation
+
+    Returns:
+        List[str]: page observation devided at " [SEP] "
+    """
+
+    return page.split(" [SEP] ")
+
+def simplify_html(page: str, with_eid: bool = False) -> List[str]:
+    #  function simplify_html {{{ # 
+    """
+    Args:
+        page (str): full html page observation
+        with_eid (bool): if an auxiliary `eid` (element id) should be added to
+          the returned elements
+
+    Returns:
+        List[str]: only leaf nodes of the html
+    """
+
+    page = page.replace("<br>", "&#10;")\
+               .replace("<br/>", "&#10;")
+    html_root: lxml.html.Element = lxml.html.fromstring(page)
+    for n in list(html_root):
+        if n.tag=="body":
+            body_root: lxml.html.Element = n
+            break
+    result_list: List[str] = []
+
+    if with_eid:
+        id_counter = 0
+    for n in body_root.iter():
+        if isinstance(n, lxml.html.HtmlComment):
+            continue
+        if len(list(n))==0:
+            if with_eid:
+                n.set("eid", str(id_counter))
+                id_counter += 1
+            if "href" in n.attrib:
+                del n.attrib["href"]
+            if "data-url" in n.attrib:
+                del n.attrib["data-url"]
+            if "src" in n.attrib:
+                del n.attrib["src"]
+            result_list.append( lxml.html.tostring( n
+                                                  , pretty_print=True
+                                                  , encoding="unicode"
+                                                  ).strip()\
+                                                   .replace("\n", "&#10;")\
+                                                   .replace("\r", "&#13;")
+                              )
+    return result_list
+    #  }}} function simplify_html # 
 
 if __name__ == "__main__":
     import sys
