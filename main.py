@@ -43,6 +43,9 @@ def main():
                                  ]
                        )
 
+    parser.add_argument("--starts-from", default=0, type=int)
+    parser.add_argument("--ends-at", default=70, type=int)
+
     args: argparse.Namespace = parser.parse_args()
     #  }}} Command Line Options # 
 
@@ -183,8 +186,7 @@ def main():
 
     #  Work Flow {{{ # 
     max_nb_steps = 15
-    for i in range(0, env.nb_tasks):
-        #for i in range(3, 70):
+    for i in range(args.starts_from, args.ends_at):
         model.reset()
         step: dm_env.TimeStep = env.switch_task(i)
         command: str = "\n".join(env.command())
