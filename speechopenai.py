@@ -1,5 +1,8 @@
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, Callable
 from typing import List, NamedTuple, Dict
+
+import openai
+import yaml
 
 import requests
 import json
@@ -59,6 +62,9 @@ class Result(NamedTuple):
     text: str
     finish_reason: str
 
+TEXT_COMPLETION = Callable[[str, Any, float], Result]
+CHAT_COMPLETION = Callable[[List[Dict[str, str]], Any, float], Result]
+
 class OpenAI:
     #  class OpenAI {{{ # 
     def __init__(self, token_key: str):
@@ -116,6 +122,7 @@ class OpenAI:
 
 def ChatGLM( messages: List[Dict[str, str]]
            , request_timeout: float = 5.
+           , **params
            ) -> Dict[str, Any]:
     #  function ChatGLM {{{ # 
     """
@@ -150,6 +157,7 @@ def LLaMA( prompt: str
          , presence_penalty: float = 0.
          , frequency_penalty: float = 0.
          , request_timeout: float = 5.
+         , **params
          ) -> Dict[str, Any]:
     #  function LLaMA {{{ # 
     load = { "model": "llama-7b"
@@ -212,9 +220,82 @@ def LLaMA( prompt: str
     #return resp.json()
 #  }}} Reference Code from SLT # 
 
+### ### ###
+
+def GPT35( prompt: str
+         , max_tokens: int
+         , temperature: float
+         , suffix: Optional[str] = None
+         , top_p: int = 1
+         , stream: bool = False
+         , logprobs: Optional[int] = None
+         , stop: Optional[Union[str, List[str]]] = None
+         , presence_penalty: float = 0.
+         , frequency_penalty: float = 0.
+         , logit_bias: Optional[Dict[str, float]] = None
+         , request_timeout: float = 5.
+         , **params
+         ) -> Result:
+    #  function GPT35 {{{ # 
+    completion = openai.Completion.create( model="text-davinci-003"
+                                         , prompt=prompt
+                                         , max_tokens=max_tokens
+                                         , temperature=temperature
+                                         , suffix=suffix
+                                         , top_p=top_p
+                                         , stream=stream
+                                         , logprobs=logprobs
+                                         , stop=stop
+                                         , presence_penalty=presence_penalty
+                                         , frequency_penalty=frequency_penalty
+                                         , logit_bias=logit_bias
+                                         , request_timeout=request_timeout
+                                         )
+    return completion.choices[0]
+    #  }}} function GPT35 # 
+
+def ChatGPT( messages: List[Dict[str, str]]
+           , max_tokens: int
+           , temperature: float
+           , top_p: int = 1
+           , stream: bool = False
+           , stop: Optional[Union[str, List[str]]] = None
+           , presence_penalty: float = 0.
+           , frequency_penalty: float = 0.
+           , logit_bias: Optional[Dict[str, float]] = None
+           , request_timeout: float = 5.
+           , **params
+           ) -> Result:
+    #  funciton ChatGPT {{{ # 
+    completion = openai.ChatCompletion.create( model="gpt-3.5-turbo-0301"
+                                             , messages=messages
+                                             , max_tokens=max_tokens
+                                             , temperature=temperature
+                                             #, suffix=suffix
+                                             , top_p=top_p
+                                             , stream=stream
+                                             #, logprobs=logprobs
+                                             , stop=stop
+                                             , presence_penalty=presence_penalty
+                                             , frequency_penalty=frequency_penalty
+                                             #, logit_bias=logit_bias
+                                             , request_timeout=request_timeout
+                                             )
+    return Result( text=completion.choices[0].message["content"]
+                 , finish_reason=completion.choices[0].finish_reason
+                 )
+    #  }}} funciton ChatGPT # 
+
 if __name__ == "__main__":
+    with open("openaiconfig.yaml") as f:
+        api_key: str = yaml.load(f, Loader=yaml.Loader)["api_key"]
+    openai.api_key = api_key
+
     message = { "role": "user"
-               , "content": "Hello, "
-               }
-    response: Dict[str, Any] = ChatGLM([message])
+              , "content": "Hello, "
+              }
+    response: Dict[str, Any] = ChatGPT( [message]
+                                      , max_tokens=20
+                                      , temperature=1.0
+                                      )
     print(response)
