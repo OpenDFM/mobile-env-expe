@@ -1,0 +1,7 @@
+Given a task desciption, a screen representation in simplified html, and an instruction sentence at the current step, I need to take an appropriate action according to the given information to finish the underlying task. Available actions are:
+
+INPUT(element_id, text)
+CLICK(element_id)
+SCROLL(direction)
+
+Usually I will click the correct link to access the willing contents or search or scroll down if it is not present on the current screen.

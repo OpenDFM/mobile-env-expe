@@ -14,8 +14,9 @@ import android_env
 from android_env.wrappers import VhIoWrapper
 from transformers import AutoTokenizer
 import dm_env
+import speechopenai
 
-from typing import Dict
+from typing import Dict, List
 import numpy as np
 
 def main():
@@ -30,9 +31,17 @@ def main():
     parser.add_argument("--tokenizer-path", type=str)
 
     parser.add_argument("--prompt-template", type=str)
-    parser.add_argument("--max-tokens", default=20, type=int)
+    parser.add_argument("--max-tokens", default=30, type=int)
     parser.add_argument("--temperature", default=0.1, type=float)
     parser.add_argument("--request-timeout", default=3., type=float)
+
+    parser.add_argument( "--model", default="text-davinci-003", type=str
+                       , choices=[ "text-davinci-003"
+                                 , "gpt-3.5-turbo"
+                                 , "chatglm-6b"
+                                 , "llama-7b"
+                                 ]
+                       )
 
     args: argparse.Namespace = parser.parse_args()
     #  }}} Command Line Options # 
@@ -88,15 +97,65 @@ def main():
     #  }}} Config Logger # 
 
     #  Build Agent and Environment {{{ # 
-    with open(args.prompt_template) as f:
-        prompt_template = string.Template(f.read())
+    completors = { "text-davinci-003": speechopenai.GPT35
+                 , "gpt-3.5-turbo": speechopenai.ChatGPT
+                 , "chatglm-6b": speechopenai.ChatGLM
+                 , "llama-7b": speechopenai.LLaMA
+                 }
+    model_types = { "text-davinci-003": "text"
+                  , "gpt-3.5-turbo": "chat"
+                  , "chatglm-6b": "chat"
+                  , "llama-7b": "text"
+                  }
+    model_type: str = model_types[args.model]
+    if model_type=="text":
+        with open(args.prompt_template) as f:
+            prompt_template = string.Template(f.read())
+            message_history = None
+    else:
+        message_history: List[Dict[str, str]] = []
+        with open(os.path.join(args.prompt_template, "prompt_system.txt")) as f:
+            system_text: str = f.read()
+            message_history.append( { "role": "system"
+                                    , "content": system_text
+                                    }
+                                  )
+        with open(os.path.join(args.prompt_template, "prompt_eg1_input.txt")) as f:
+            prompt_eg1_input: str = f.read()
+            message_history.append( { "role": "user"
+                                    , "content": prompt_eg1_input
+                                    }
+                                  )
+        with open(os.path.join(args.prompt_template, "prompt_eg1_action.txt")) as f:
+            prompt_eg1_action: str = f.read()
+            message_history.append( { "role": "assistant"
+                                    , "content": prompt_eg1_action
+                                    }
+                                  )
+        with open(os.path.join(args.prompt_template, "prompt_eg2_input.txt")) as f:
+            prompt_eg2_input: str = f.read()
+            message_history.append( { "role": "user"
+                                    , "content": prompt_eg2_input
+                                    }
+                                  )
+        with open(os.path.join(args.prompt_template, "prompt_eg2_action.txt")) as f:
+            prompt_eg2_action: str = f.read()
+            message_history.append( { "role": "assistant"
+                                    , "content": prompt_eg2_action
+                                    }
+                                  )
+        with open(os.path.join(args.prompt_template, "prompt_new_input.txt")) as f:
+            prompt_template = string.Template(f.read())
     with open(args.config) as f:
         openaiconfig: Dict[str, str] = yaml.load(f, Loader=yaml.Loader)
     model = agent.AutoAgent( prompt_template=prompt_template
+                           , completor=completors[args.model]
                            , api_key=openaiconfig["api_key"]
                            , max_tokens=args.max_tokens
                            , temperature=args.temperature
                            , request_timeout=args.request_timeout
+                           , model=model_type
+                           , message_history=message_history
                            )
     #model = agent.ManualAgent()
 
@@ -124,7 +183,7 @@ def main():
 
     #  Work Flow {{{ # 
     max_nb_steps = 15
-    for i in range(70, env.nb_tasks):
+    for i in range(0, env.nb_tasks):
         #for i in range(3, 70):
         model.reset()
         step: dm_env.TimeStep = env.switch_task(i)

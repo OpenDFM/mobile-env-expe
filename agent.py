@@ -1,12 +1,13 @@
 import vh_to_html
 import re
 import openai
+import speechopenai
 
 import lxml.etree
 import lxml.html
 from android_env.wrappers import VhIoWrapper
 from typing import Dict, Pattern, Match, List
-from typing import Optional
+from typing import Optional, Union
 import numpy as np
 import string
 
@@ -179,36 +180,53 @@ class AutoAgent(Agent):
     #  class AutoAgent {{{ # 
     def __init__( self
                 , prompt_template: string.Template
-                , api_key: str
-                , model: str = "text-davinci-003" # or maybe "engine"? not sure
+                , completor: Union[ speechopenai.TEXT_COMPLETION
+                                  , speechopenai.CHAT_COMPLETION
+                                  ]
+                , api_key: Optional[str]
                 , max_tokens: int = 20
                 , temperature: float = 0.1
                 , request_timeout: float = 3.
+                , model: str = "text"
+                , message_history: Optional[List[Dict[str, str]]] = None
                 ):
         #  method __init__ {{{ # 
         """
         Args:
             prompt_template (string.Template): template of the prompt
+            completor (Union[speechopenai.TEXT_COMPLETION, speechopenai.CHAT_COMPLETION]):
+              the invocation interface to the LLM
 
-            api_key (str): openai api key
-            model (str): the model to use
+            api_key (Optional[str]): openai api key
             max_tokens (int): max number of tokens to generate
             temperature (float): generating temperature
             request_timeout (float): waiting time for the client to timeout
+
+            model (str): "text" | "chat"
+            message_history (Optional[List[Dict[str, str]]]): message history
+              for chat models
         """
 
         super(AutoAgent, self).__init__()
 
         self._prompt_template: string.Template = prompt_template
         self._api_key: str = api_key
-        self._model: str = model
+        #self._model: str = model
         self._max_tokens: int = max_tokens
         self._temperature: float = temperature
         self._request_timeout: float = request_timeout
 
         self._last_request_time: datetime.datetime = datetime.datetime.now()
 
-        openai.api_key = api_key
+        self._model: str = model
+        self._completor: Union[ speechopenai.TEXT_COMPLETION
+                              , speechopenai.CHAT_COMPLETION
+                              ] = completor
+        if model=="chat":
+            self._message_history: List[Dict[str, str]] = message_history or []
+
+        if api_key is not None:
+            openai.api_key = api_key
         #  }}} method __init__ # 
 
     def _get_action( self
@@ -230,20 +248,33 @@ class AutoAgent(Agent):
             timedelta: float = timedelta.total_seconds()
             if 3.1 - timedelta > 0.:
                 time.sleep(3.1-timedelta)
-            completion = openai.Completion.create( model=self._model
-                                                 , prompt=prompt
-                                                 , max_tokens=self._max_tokens
-                                                 , temperature=self._temperature
-                                                 , request_timeout=self._request_timeout
-                                                 )
+
+            #completion = openai.Completion.create( model=self._model
+                                                 #, prompt=prompt
+                                                 #, max_tokens=self._max_tokens
+                                                 #, temperature=self._temperature
+                                                 #, request_timeout=self._request_timeout
+                                                 #)
+            if self._model=="chat":
+                prompt: List[Dict[str, str]] =\
+                        self._message_history + [ { "role": "user"
+                                                  , "content": prompt
+                                                  }
+                                                ]
+            completion: speechopenai.Result = self._completor( prompt
+                                                             , max_tokens=self._max_tokens
+                                                             , temperature=self._temperature
+                                                             , request_timeout=self._request_timeout
+                                                             )
+
             self._last_request_time = datetime.datetime.now()
 
             logger.debug( "Return: {text: %s, reason: %s}"
-                        , repr(completion.choices[0].text)
-                        , repr(completion.choices[0].finish_reason)
+                        , repr(completion.text)
+                        , repr(completion.finish_reason)
                         )
 
-            response: str = completion.choices[0].text.strip()
+            response: str = completion.text.strip()
             #  }}} Fetch Response # 
 
             #  Parse Action Text {{{ # 
