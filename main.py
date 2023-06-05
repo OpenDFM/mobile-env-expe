@@ -42,6 +42,7 @@ def main():
                                  , "gpt-3.5-turbo"
                                  , "chatglm-6b"
                                  , "llama-7b"
+                                 , "bloom-176b"
                                  ]
                        )
 
