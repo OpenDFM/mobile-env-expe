@@ -319,7 +319,7 @@ class HuggingFace:
         self._key: str = key
         self._header = {"Authorization": "Bearer {:}".format(key)}
 
-    def BLOOMZ( self
+    def BLOOM( self
              , prompt: str
              , max_tokens: int
              , temperature: float
@@ -335,7 +335,37 @@ class HuggingFace:
                }
 
         while True:
-            response: requests.Response = requests.post( _BASE_URL["completionhf"] + "bigscience/bloomz"
+            response: requests.Response = requests.post( _BASE_URL["completionhf"] + "bigscience/bloom"
+                                                       #, data=load["inputs"]
+                                                       , json=load
+                                                       , headers=self._header
+                                                       )
+            if response.status_code==200:
+                break
+            logger.error("%d: %s", response.status_code, response.text)
+        result: Dict[str, str] = response.json()[0]
+        return Result( text=result["generated_text"].strip().splitlines()[0]
+                     , finish_reason="stop"
+                     )
+        #  }}} function BLOOM # 
+
+    def BLOOMZ( self
+              , prompt: str
+              , max_tokens: int
+              , temperature: float
+              , **param
+              ) -> Result:
+        #  function BLOOM {{{ # 
+        load = { "inputs": prompt
+               , "parameters": { "temperature": temperature
+                               , "max_new_tokens": max_tokens
+                               , "return_full_text": False
+                               }
+               , "options": {"use_cache": False}
+               }
+
+        while True:
+            response: requests.Response = requests.post( _BASE_URL["completionhf"] + "bigscience/bloomz-7b1"
                                                        #, data=load["inputs"]
                                                        , json=load
                                                        , headers=self._header
@@ -602,7 +632,7 @@ Access the article "How to Overcome Fear"
 
     #chatglm = ChatGLM_loc()
     hf = HuggingFace(hf_key)
-    response = hf.BLOOMZ( messages
+    response = hf.BLOOM( messages
                        , max_tokens=50
                        , temperature=0.1
                        )
