@@ -16,6 +16,7 @@ format H 11 2 0
 format L 11 2 0
 format O 11 2 0
 format P 11 2 0
+format T 11 2 0
 hidecol F:I
 label A0 = "Env Name"
 label B0 = "#Steps"
@@ -34,6 +35,10 @@ label N0 = "#Steps"
 label O0 = "Reward"
 label P0 = "Reward Rate"
 label Q0 = "Succeeds"
+label R0 = "#Steps"
+label S0 = "Reward"
+label T0 = "Reward Rate"
+label U0 = "Succeeds"
 label A1 = "180_on_a_scooter-8"
 let B1 = 2
 let C1 = 2
@@ -51,6 +56,9 @@ let N1 = 15
 let O1 = 1
 let P1 = O1/N1
 let Q1 = 0
+let R1 = 2
+let S1 = 2
+let U1 = 1
 label A2 = "address_a_letter_to_england-7"
 let B2 = 3
 let C2 = 3
@@ -68,6 +76,9 @@ let N2 = 15
 let O2 = 2
 let P2 = O2/N2
 let Q2 = 0
+let R2 = 15
+let S2 = 2
+let U2 = 0
 label A3 = "apply_cc_cream-0"
 let B3 = 3
 let C3 = 3
@@ -85,6 +96,9 @@ let N3 = 15
 let O3 = 1
 let P3 = O3/N3
 let Q3 = 0
+let R3 = 12
+let S3 = 3
+let U3 = 1
 label A4 = "apply_neosporin-0.textproto"
 let B4 = 7
 let C4 = 3
@@ -1242,7 +1256,7 @@ let O71 = @avg(O1:O70)
 let P71 = @avg(P1:P70)
 let Q71 = @avg(Q1:Q70)
 leftstring A73 = "备注：g3.5 w/ H, g3.5 w/o h, chgpt, chglm"
-goto A73
+goto T3
 movetosheet "record"
 offscr_sc_cols 0
 offscr_sc_rows 0
@@ -1266,5 +1280,8 @@ label C3 = "42-69"
 leftstring A4 = "20230605@224432"
 label B4 = "ChatGLM-6B"
 label C4 = "0-69"
-goto C4
-movetosheet "record"
+leftstring A5 = "20230606@020151"
+label B5 = "LLaMa-13B"
+label C5 = "0-2"
+goto C5
+movetosheet "w/ history"

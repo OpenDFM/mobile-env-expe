@@ -41,7 +41,7 @@ def main():
                        , choices=[ "text-davinci-003"
                                  , "gpt-3.5-turbo"
                                  , "chatglm-6b"
-                                 , "llama-7b"
+                                 , "llama-13b"
                                  , "bloom-176b"
                                  ]
                        )
@@ -109,22 +109,22 @@ def main():
         hf_key: str = openaiconfig["hf_token"]
     completors = { "text-davinci-003": speechopenai.GPT35
                  , "gpt-3.5-turbo": speechopenai.ChatGPT
-                 , "chatglm-6b": speechopenai.ChatGLM_loc()
-                 , "llama-7b": speechopenai.LLaMA
+                  #, "chatglm-6b": speechopenai.ChatGLM_loc()
+                 , "llama-13b": speechopenai.LLaMA_us
                  , "bloom-176b": speechopenai.HuggingFace(hf_key).BLOOM
                  , "bloomz-7b1": speechopenai.HuggingFace(hf_key).BLOOMZ
                  }
     model_types = { "text-davinci-003": "text"
                   , "gpt-3.5-turbo": "chat"
                   , "chatglm-6b": "chat"
-                  , "llama-7b": "text"
+                  , "llama-13b": "text"
                   , "bloom-176b": "text"
                   , "bloomz-7b1": "text"
                   }
     model_lengths = { "text-davinci-003": "4k"
                     , "gpt-3.5-turbo": "4k"
                     , "chatglm-6b": "2k"
-                    , "llama-7b": "2k"
+                    , "llama-13b": "2k"
                     , "bloom-176b": "2k"
                     , "bloomz-7b1": "2k"
                     }

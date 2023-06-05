@@ -11,11 +11,13 @@ transformers.utils.extract_commit_hash = None
 
 import openai
 import yaml
-#import os
-import requests
 import json
-#import itertools
-#import torch
+import os
+import time
+
+import requests
+import socket
+import struct
 
 import logging
 
@@ -379,6 +381,54 @@ class HuggingFace:
                      )
         #  }}} function BLOOM # 
     #  }}} class BLOOM_Hf # 
+
+### ########### ###
+### Unix Socket ###
+### ########### ###
+
+def LLaMA_us( prompt: str
+         , **params
+         ) -> Result:
+    #  function LLaMA {{{ # 
+    socket_file0 = "/tmp/llama-listener-socket.{:}.{:}.0".format( socket.gethostname()
+                                                                  , os.getuid()
+                                                                  )
+    socket_file1 = "/tmp/llama-listener-socket.{:}.{:}.1".format( socket.gethostname()
+                                                                  , os.getuid()
+                                                                  )
+
+    while not os.path.exists(socket_file0) or not os.path.exists(socket_file1):
+        time.sleep(3.)
+
+    message: bytes = prompt.encode("utf-8")
+    message_length: int = len(message)
+    message_length: bytes = struct.pack("=I", message_length)
+
+    session0 = socket.socket(socket.AF_UNIX)
+    session0.connect(socket_file0)
+    session0.setblocking(True)
+
+    session0.sendall(message_length)
+    session0.sendall(message)
+
+    session1 = socket.socket(socket.AF_UNIX)
+    session1.connect(socket_file1)
+    session1.setblocking(True)
+
+    session1.sendall(message_length)
+    session1.sendall(message)
+
+    completion_length: bytes = session0.recv(4)
+    completion_length: int = struct.unpack("=I", completion_length)[0]
+    completion: str = session0.recv(completion_length).decode("utf-8")
+
+    session0.shutdown(socket.SHUT_RDWR)
+    session1.shutdown(socket.SHUT_RDWR)
+
+    return Result( text=completion.strip().splitlines()[0]
+                 , finish_reason="stop"
+                 )
+    #  }}} function LLaMA # 
 
 ### ##### ###
 ### Local ###
