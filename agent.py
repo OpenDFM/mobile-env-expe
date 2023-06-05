@@ -1,6 +1,6 @@
 import vh_to_html
 import re
-import openai
+#import openai
 import speechopenai
 
 import lxml.etree
@@ -183,7 +183,7 @@ class AutoAgent(Agent):
                 , completor: Union[ speechopenai.TEXT_COMPLETION
                                   , speechopenai.CHAT_COMPLETION
                                   ]
-                , api_key: Optional[str]
+                 #, api_key: Optional[str]
                 , max_tokens: int = 20
                 , temperature: float = 0.1
                 , request_timeout: float = 3.
@@ -197,7 +197,7 @@ class AutoAgent(Agent):
             completor (Union[speechopenai.TEXT_COMPLETION, speechopenai.CHAT_COMPLETION]):
               the invocation interface to the LLM
 
-            api_key (Optional[str]): openai api key
+            #api_key (Optional[str]): openai api key
             max_tokens (int): max number of tokens to generate
             temperature (float): generating temperature
             request_timeout (float): waiting time for the client to timeout
@@ -210,7 +210,7 @@ class AutoAgent(Agent):
         super(AutoAgent, self).__init__()
 
         self._prompt_template: string.Template = prompt_template
-        self._api_key: str = api_key
+        #self._api_key: str = api_key
         #self._model: str = model
         self._max_tokens: int = max_tokens
         self._temperature: float = temperature
@@ -225,8 +225,8 @@ class AutoAgent(Agent):
         if model=="chat":
             self._message_history: List[Dict[str, str]] = message_history or []
 
-        if api_key is not None:
-            openai.api_key = api_key
+        #if api_key is not None:
+            #openai.api_key = api_key
         #  }}} method __init__ # 
 
     def _get_action( self

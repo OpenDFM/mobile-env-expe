@@ -6,6 +6,6 @@ python main.py --task-path ../../../android_env/apps/wikihow/templates.miniout.m
 			   --tokenizer-path weights/vilt-b32-mlm-tiny-tkn\
 			   --prompt-template prompts/chat_prompt\
 			   --request-timeout 8.\
-			   --model gpt-3.5-turbo\
+			   --model chatglm-6b\
 			   --starts-from 0\
 			   --ends-at 70

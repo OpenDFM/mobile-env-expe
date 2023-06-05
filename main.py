@@ -14,7 +14,9 @@ import android_env
 from android_env.wrappers import VhIoWrapper
 from transformers import AutoTokenizer
 import dm_env
+
 import speechopenai
+import openai
 
 from typing import Dict, List
 import numpy as np
@@ -100,24 +102,38 @@ def main():
     #  }}} Config Logger # 
 
     #  Build Agent and Environment {{{ # 
+    with open(args.config) as f:
+        openaiconfig: Dict[str, str] = yaml.load(f, Loader=yaml.Loader)
+        openai.api_key = openaiconfig["api_key"]
+        hf_key: str = openaiconfig["hf_token"]
     completors = { "text-davinci-003": speechopenai.GPT35
                  , "gpt-3.5-turbo": speechopenai.ChatGPT
-                 , "chatglm-6b": speechopenai.ChatGLM
+                 , "chatglm-6b": speechopenai.ChatGLM_loc()
                  , "llama-7b": speechopenai.LLaMA
+                 , "bloom-176b": speechopenai.HuggingFace(hf_key).BLOOMZ
                  }
     model_types = { "text-davinci-003": "text"
                   , "gpt-3.5-turbo": "chat"
                   , "chatglm-6b": "chat"
                   , "llama-7b": "text"
+                  , "bloom-176b": "text"
                   }
+    model_lengths = { "text-davinci-003": "4k"
+                    , "gpt-3.5-turbo": "4k"
+                    , "chatglm-6b": "2k"
+                    , "llama-7b": "2k"
+                    , "bloom-176b": "2k"
+                    }
     model_type: str = model_types[args.model]
+    model_length: str = model_lengths[args.model]
     if model_type=="text":
         with open(args.prompt_template) as f:
             prompt_template = string.Template(f.read())
             message_history = None
     else:
         message_history: List[Dict[str, str]] = []
-        with open(os.path.join(args.prompt_template, "prompt_system.txt")) as f:
+        system_file = "prompt_system_2k.txt" if model_length=="2k" else "prompt_system.txt"
+        with open(os.path.join(args.prompt_template, system_file)) as f:
             system_text: str = f.read()
             message_history.append( { "role": "system"
                                     , "content": system_text
@@ -135,7 +151,11 @@ def main():
                                     , "content": prompt_eg1_action
                                     }
                                   )
-        with open(os.path.join(args.prompt_template, "prompt_eg2_input.txt")) as f:
+        if model_length=="2k":
+            prompt_eg2_input_file = "prompt_eg2_input_2k.txt"
+        else:
+            prompt_eg2_input_file = "prompt_eg2_input.txt"
+        with open(os.path.join(args.prompt_template, prompt_eg2_input_file)) as f:
             prompt_eg2_input: str = f.read()
             message_history.append( { "role": "user"
                                     , "content": prompt_eg2_input
@@ -149,11 +169,8 @@ def main():
                                   )
         with open(os.path.join(args.prompt_template, "prompt_new_input.txt")) as f:
             prompt_template = string.Template(f.read())
-    with open(args.config) as f:
-        openaiconfig: Dict[str, str] = yaml.load(f, Loader=yaml.Loader)
     model = agent.AutoAgent( prompt_template=prompt_template
                            , completor=completors[args.model]
-                           , api_key=openaiconfig["api_key"]
                            , max_tokens=args.max_tokens
                            , temperature=args.temperature
                            , request_timeout=args.request_timeout
@@ -186,6 +203,7 @@ def main():
 
     #  Work Flow {{{ # 
     max_nb_steps = 15
+    max_nb_consecutive_nothing_steps = 15
     for i in range(args.starts_from, args.ends_at):
         model.reset()
         step: dm_env.TimeStep = env.switch_task(i)
@@ -194,6 +212,7 @@ def main():
 
         nb_steps = 0
         nb_nothing_steps = 0
+        nb_consecutive_nothing = 0
 
         reward: float = step.reward
         succeeds: bool = True
@@ -212,9 +231,14 @@ def main():
                     and "records" in action\
                     and not action["records"]:
                 nb_nothing_steps += 1
+                nb_consecutive_nothing += 1
             else:
                 nb_steps += 1
+                nb_consecutive_nothing = 0
 
+            if nb_consecutive_nothing>=max_nb_consecutive_nothing_steps:
+                succeeds = False
+                break
             if nb_steps>=max_nb_steps:
                 succeeds = False
                 break

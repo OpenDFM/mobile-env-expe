@@ -1,0 +1,5 @@
+Available responses are:
+
+INPUT(element_id, text)
+CLICK(element_id)
+SCROLL(direction)
