@@ -8,6 +8,7 @@ import sys
 import yaml
 import datetime
 import string
+import time
 
 import agent
 import android_env
@@ -210,7 +211,12 @@ def main():
     max_nb_consecutive_nothing_steps = 15
     for i in range(args.starts_from, args.ends_at):
         model.reset()
-        step: dm_env.TimeStep = env.switch_task(i)
+        while True:
+            try:
+                step: dm_env.TimeStep = env.switch_task(i)
+                break
+            except AttributeError:
+                time.sleep(1.)
         command: str = "\n".join(env.command())
         instruction: str = env.task_instructions(latest_only=True)
 
