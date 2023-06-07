@@ -232,7 +232,12 @@ def main():
                            , step.observation["view_hierarchy"]
                            , instruction
                            )
-            step = env.step(action)
+            while True:
+                try:
+                    step = env.step(action)
+                    break
+                except AttributeError:
+                    time.sleep(1.)
             if len(env.task_instructions())>0:
                 instruction = env.task_instructions(latest_only=True)
             reward += step.reward

@@ -7,5 +7,5 @@ python main.py --task-path ../../../android_env/apps/wikihow/templates.miniout.m
 			   --prompt-template prompts/chat_prompt\
 			   --request-timeout 8.\
 			   --model gpt-3.5-turbo\
-			   --starts-from 0\
+			   --starts-from 32\
 			   --ends-at 70
