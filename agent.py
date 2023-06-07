@@ -278,7 +278,7 @@ class AutoAgent(Agent):
             #  }}} Fetch Response # 
 
             #  Parse Action Text {{{ # 
-            action_text: str = response
+            action_text: str = response.splitlines()[0]
             #  }}} Parse Action Text # 
         except Exception as e:
             with io.StringIO() as bfr:
