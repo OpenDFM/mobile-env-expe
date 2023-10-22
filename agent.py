@@ -1,7 +1,7 @@
 import vh_to_html
 import re
 #import openai
-import speechopenai
+import llm_accessor
 
 import lxml.etree
 import lxml.html
@@ -180,8 +180,8 @@ class AutoAgent(Agent):
     #  class AutoAgent {{{ # 
     def __init__( self
                 , prompt_template: string.Template
-                , completor: Union[ speechopenai.TEXT_COMPLETION
-                                  , speechopenai.CHAT_COMPLETION
+                , completor: Union[ llm_accessor.TEXT_COMPLETION
+                                  , llm_accessor.CHAT_COMPLETION
                                   ]
                  #, api_key: Optional[str]
                 , max_tokens: int = 20
@@ -194,7 +194,7 @@ class AutoAgent(Agent):
         """
         Args:
             prompt_template (string.Template): template of the prompt
-            completor (Union[speechopenai.TEXT_COMPLETION, speechopenai.CHAT_COMPLETION]):
+            completor (Union[llm_accessor.TEXT_COMPLETION, llm_accessor.CHAT_COMPLETION]):
               the invocation interface to the LLM
 
             #api_key (Optional[str]): openai api key
@@ -219,8 +219,8 @@ class AutoAgent(Agent):
         self._last_request_time: datetime.datetime = datetime.datetime.now()
 
         self._model: str = model
-        self._completor: Union[ speechopenai.TEXT_COMPLETION
-                              , speechopenai.CHAT_COMPLETION
+        self._completor: Union[ llm_accessor.TEXT_COMPLETION
+                              , llm_accessor.CHAT_COMPLETION
                               ] = completor
         if model=="chat":
             self._message_history: List[Dict[str, str]] = message_history or []
@@ -261,7 +261,7 @@ class AutoAgent(Agent):
                                                   , "content": prompt
                                                   }
                                                 ]
-            completion: speechopenai.Result = self._completor( prompt
+            completion: llm_accessor.Result = self._completor( prompt
                                                              , max_tokens=self._max_tokens
                                                              , temperature=self._temperature
                                                              , request_timeout=self._request_timeout

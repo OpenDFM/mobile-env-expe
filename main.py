@@ -16,7 +16,7 @@ from android_env.wrappers import VhIoWrapper
 from transformers import AutoTokenizer
 import dm_env
 
-import speechopenai
+import llm_accessor
 import openai
 
 from typing import Dict, List
@@ -43,7 +43,6 @@ def main():
                                  , "gpt-3.5-turbo"
                                  , "chatglm-6b"
                                  , "llama-13b"
-                                 , "bloom-176b"
                                  ]
                        )
 
@@ -107,27 +106,20 @@ def main():
     with open(args.config) as f:
         openaiconfig: Dict[str, str] = yaml.load(f, Loader=yaml.Loader)
         openai.api_key = openaiconfig["api_key"]
-        hf_key: str = openaiconfig["hf_token"]
-    completors = { "text-davinci-003": speechopenai.GPT35
-                 , "gpt-3.5-turbo": speechopenai.ChatGPT
-                  #, "chatglm-6b": speechopenai.ChatGLM_loc()
-                 , "llama-13b": speechopenai.LLaMA_us
-                 , "bloom-176b": speechopenai.HuggingFace(hf_key).BLOOM
-                 , "bloomz-7b1": speechopenai.HuggingFace(hf_key).BLOOMZ
+    completors = { "text-davinci-003": llm_accessor.GPT35
+                 , "gpt-3.5-turbo": llm_accessor.ChatGPT
+                  #, "chatglm-6b": llm_accessor.ChatGLM_loc()
+                 , "llama-13b": llm_accessor.LLaMA_us
                  }
     model_types = { "text-davinci-003": "text"
                   , "gpt-3.5-turbo": "chat"
                   , "chatglm-6b": "chat"
                   , "llama-13b": "text"
-                  , "bloom-176b": "text"
-                  , "bloomz-7b1": "text"
                   }
     model_lengths = { "text-davinci-003": "4k"
                     , "gpt-3.5-turbo": "4k"
                     , "chatglm-6b": "2k"
                     , "llama-13b": "2k"
-                    , "bloom-176b": "2k"
-                    , "bloomz-7b1": "2k"
                     }
     model_type: str = model_types[args.model]
     model_length: str = model_lengths[args.model]
